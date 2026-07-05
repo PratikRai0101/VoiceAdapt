@@ -9,7 +9,8 @@ import numpy as np
 from mpmath.function_docs import si
 from numpy.random.mtrand import f
 from rich import inspect
-from rich.abc import t
+
+# from rich.abc import t
 from rich.console import Console
 from torch import onnx
 from torch._refs import abs_
