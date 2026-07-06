@@ -1,5 +1,3 @@
-from this import d
-
 import numpy as np
 import pytest
 
