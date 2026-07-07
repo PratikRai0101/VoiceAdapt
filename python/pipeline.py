@@ -3,14 +3,17 @@ python/pipeline.py - Main Pipeline
 Connects: VAD → Inference → Correction UI → DB
 """
 
+from pathlib import Path
+import soundfile as sf
 from rich.console import Console
 from rich.table import Table
 from python.vad       import VADSegmenter, segment_file, AudioChunk
 from python.inference import InferenceEngine
 from python.db        import CorrectionDB
 
-console           = Console()
+console            = Console()
 FINE_TUNE_THRESHOLD = 50
+CORRECTIONS_DIR     = Path('data/corrections')
 
 
 class VoiceAdaptPipeline:
@@ -35,12 +38,20 @@ class VoiceAdaptPipeline:
             self._process(chunk, interactive=False)
         self._print_stats()
 
+    def _save_audio(self, chunk: AudioChunk) -> Path:
+        CORRECTIONS_DIR.mkdir(parents=True, exist_ok=True)
+        path = CORRECTIONS_DIR / f'{chunk.uuid}.wav'
+        sf.write(str(path), chunk.audio, chunk.sample_rate)
+        return path
+
     def _process(self, chunk: AudioChunk, interactive=True):
+        audio_path = self._save_audio(chunk)
         result = self.engine.transcribe(chunk)
         if not result.text: return
         corrected = self._get_correction(result.text) if interactive else result.text
         self.db.insert_pair(chunk_uuid=chunk.uuid, raw_transcript=result.text,
-                            corrected_text=corrected, adapter_ver=result.adapter_ver)
+                            corrected_text=corrected, adapter_ver=result.adapter_ver,
+                            audio_path=str(audio_path) if audio_path else None)
         if self.db.count_untrained_pairs() >= FINE_TUNE_THRESHOLD:
             console.print('[cyan] Fine-tune threshold reached (Sprint 2 will train here)[/cyan]')
 
