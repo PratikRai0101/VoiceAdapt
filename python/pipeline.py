@@ -3,6 +3,7 @@ python/pipeline.py - Main Pipeline
 Connects: VAD → Inference → Correction UI → DB
 """
 
+import difflib
 from pathlib import Path
 import soundfile as sf
 from rich.console import Console
@@ -60,6 +61,14 @@ class VoiceAdaptPipeline:
         console.print('[dim]Enter to accept, or type correction:[/dim] ', end='')
         try:
             inp = input().strip()
+            if inp and inp != raw:
+                diff = list(difflib.ndiff(raw.split(), inp.split()))
+                added = [w[2:] for w in diff if w.startswith('+ ')]
+                removed = [w[2:] for w in diff if w.startswith('- ')]
+                if added:
+                    console.print(f'[green]+ {" ".join(added)}[/green]')
+                if removed:
+                    console.print(f'[red]- {" ".join(removed)}[/red]')
             return inp if inp else raw
         except EOFError:
             return raw
